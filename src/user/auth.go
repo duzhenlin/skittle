@@ -16,12 +16,7 @@ import (
 	"strings"
 )
 
-func (u *User) LoginSign(r *http.Request) (*LoginSign, error) {
-	// 获取查询参数
-	query := r.URL.Query()
-	// 获取单个参数的值
-	sign := query.Get("sign")
-
+func (u *User) LoginSign(sign string) (*LoginSign, error) {
 	signEncryptStr, err := helper.AesDecrypt(sign, u.config.Skittle.SecretKey)
 	if err != nil {
 		return nil, errors.New("登录失败，密钥解密失败")
