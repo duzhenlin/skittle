@@ -52,7 +52,7 @@ func (u *User) CacheKey(key string) string {
 	return namespace + ":" + key
 }
 
-func (u *User) GetUserInfo(token string) (string, error) {
+func (u *User) GetUserInfo(token string) (interface{}, error) {
 	client := redis.GetClientInstance(u.config)
 	ctx := context.Background()
 	key := u.CacheKey("u_" + token)
