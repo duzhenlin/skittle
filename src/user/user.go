@@ -51,3 +51,11 @@ func (u *User) CacheKey(key string) string {
 	namespace := u.config.Skittle.Namespace
 	return namespace + ":" + key
 }
+
+func (u *User) GetUserInfo(token string) (string, error) {
+	client := redis.GetClientInstance(u.config)
+	ctx := context.Background()
+	key := u.CacheKey("u_" + token)
+	result, err := client.Get(ctx, key).Result()
+	return result, err
+}

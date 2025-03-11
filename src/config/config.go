@@ -11,6 +11,7 @@ type Config struct {
 	// 配置字段
 	Redis   Redis
 	Skittle Skittle
+	Debug   bool `default:"false"`
 }
 type Skittle struct {
 	Namespace string   `json:"namespace"`

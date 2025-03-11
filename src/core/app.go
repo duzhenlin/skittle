@@ -8,7 +8,6 @@
 package core
 
 import (
-	"fmt"
 	"github.com/duzhenlin/skittle/src/config"
 	"github.com/duzhenlin/skittle/src/hprose"
 	"github.com/duzhenlin/skittle/src/hprose/client"
@@ -29,7 +28,6 @@ func NewApp(config *config.Config) *App {
 	a := &App{}
 	a.Config = config
 	a.Config.SetConfig(*config)
-
 	err := a.RegisterProviders()
 	if err != nil {
 		return nil
@@ -49,7 +47,6 @@ func (a *App) RegisterProviders() error {
 		case "User":
 			a.User = user.GetUserInstance(a.Config)
 		}
-		fmt.Println(p)
 	}
 	return nil
 }
