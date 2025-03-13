@@ -23,7 +23,7 @@ func (u *User) UserAuth(id string) (interface{}, error) {
 	args["id"] = id
 	args["namespace"] = u.config.Skittle.Namespace
 	argsJson, _ := jsoniter.Marshal(args)
-	defer helper.RunTime(time.Now(), httpClient.ClientName, "Index", args)
+	defer helper.RunTime(time.Now(), httpClient.ClientName, "UserAuth", args)
 
 	result, err := httpClient.GetDefaultUserService().UserAuth(string(argsJson), u.config.Skittle.ModuleId)
 	if err != nil {
@@ -51,7 +51,7 @@ func (u *User) UserAuthToken(token string) (interface{}, error) {
 	args["token"] = token
 	args["namespace"] = u.config.Skittle.Namespace
 	argsJson, _ := jsoniter.Marshal(args)
-	defer helper.RunTime(time.Now(), httpClient.ClientName, "Index", args)
+	defer helper.RunTime(time.Now(), httpClient.ClientName, "UserAuthToken", args)
 
 	result, err := httpClient.GetDefaultUserService().UserAuthToken(string(argsJson), u.config.Skittle.ModuleId)
 	if err != nil {

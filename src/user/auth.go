@@ -83,13 +83,13 @@ func (u *User) Login(id string, platform string) interface{} {
 func (u *User) LoginLogic(userInfo interface{}) (string, error) {
 
 	if !u.checkIsUserAuthRes(userInfo) {
-		return "", errors.New("登陆失败")
+		return "", errors.New("checkIsUserAuthRes.登陆失败")
 	}
 	UserInfo := userInfo.(LoginRes).LoginData
 	_, err := u.SetUserInfo(&UserInfo)
 	if err != nil {
 		fmt.Println(err)
-		return "", errors.New("登陆失败")
+		return "", errors.New("SetUserInfo.登陆失败")
 	}
 	if UserInfo.ModuleToken == "" {
 		srt := fmt.Sprintf("%s%s%s", util.UUIDv4(), UserInfo.ID, u.config.Skittle.Namespace)
