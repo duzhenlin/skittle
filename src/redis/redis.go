@@ -29,7 +29,7 @@ func GetClientInstance(config *config.Config) *redis.Client {
 func InitRedis(config config.Config) *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr:     config.Redis.Cont,
-		Password: "", // no password set
-		DB:       1,  // use default DB
+		Password: config.Redis.Pwd, // no password set
+		DB:       config.Redis.Db,  // use default DB
 	})
 }

@@ -35,6 +35,8 @@ type Server struct {
 
 type Redis struct {
 	Cont string `default:"127.0.0.1:6379"`
+	Pwd  string `default:""`
+	Db   int    `default:"0"`
 }
 
 func (c *Config) SetConfig(config Config) {
