@@ -40,6 +40,23 @@ func (u *User) LoginSign(sign string) (*LoginSign, error) {
 	return nil, errors.New("登录失败，密钥解密失败")
 }
 
+// LoginUserId 根据用户id进行登陆，获取token
+func (u *User) LoginUserId(userId string, platform string) (*LoginSign, error) {
+
+	userInfo := u.Login(userId, platform)
+	//登陆逻辑
+	token, err := u.LoginLogic(userInfo)
+
+	if err != nil {
+		return nil, err
+	}
+	ret := new(LoginSign)
+	ret.Token = token
+	return ret, nil
+
+}
+
+// LoginSignByToken 根据token进行登陆，获取token
 func (u *User) LoginSignByToken(r *http.Request) (*LoginSign, error) {
 	token := r.Header.Get("app_token")
 	userInfo := u.Login(token, "app")
