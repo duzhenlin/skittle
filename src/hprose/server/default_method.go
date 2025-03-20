@@ -28,12 +28,17 @@ func (s *Server) noticeFunction(data string) *noticeParam {
 	}
 	// 参数完整性检查
 	if param.Id == "" || param.OrgId == "" || param.Action == "" {
-		log.Printf("参数缺失: id=%s, org_id=%s, action=%s", param.Id, param.OrgId, param.Action)
-		return nil
+		if s.config.Debug {
+			log.Printf("参数缺失: id=%s, org_id=%s, action=%s", param.Id, param.OrgId, param.Action)
+		}
+		return &param
 	}
 	// 配置存在性检查
 	if s.config.Skittle.Server.UserUpdateFunc == nil {
-		log.Printf("user update function not configured")
+		if s.config.Debug {
+			log.Printf("[DEBUG] user update function not configured")
+		}
+		return &param
 	}
 
 	// 双重类型检查
@@ -49,8 +54,10 @@ func (s *Server) noticeFunction(data string) *noticeParam {
 			log.Printf("[DEBUG] 用户更新函数执行成功，参数: %+v", param)
 		}
 	default:
-		log.Printf("用户更新函数类型错误，期望 func(string,string,string)，实际类型 %T",
-			s.config.Skittle.Server.UserUpdateFunc)
+		if s.config.Debug {
+			log.Printf("[DEBUG] 用户更新函数类型错误，期望 func(string,string,string)，实际类型 %T",
+				s.config.Skittle.Server.UserUpdateFunc)
+		}
 	}
 
 	return &param
