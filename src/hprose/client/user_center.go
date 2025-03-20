@@ -12,14 +12,13 @@ type ServiceDefaultUser struct {
 	UserAuthToken func(string, string) (interface{}, error) `name:"user_auth_token"`
 }
 
-func (c *Client) GetDefaultUserService() ServiceDefaultUser {
+func (c *Client) GetDefaultUserService() (ServiceDefaultUser, error) {
 	var serviceDefaultUser ServiceDefaultUser
-	c.SetConfig(c.config)
-	c.To("user")
+	c.WithTarget("user")
 	serviceClient, err := c.GetClient()
 	if err != nil {
-		panic(err)
+		return serviceDefaultUser, err
 	}
 	serviceClient.UseService(&serviceDefaultUser)
-	return serviceDefaultUser
+	return serviceDefaultUser, nil
 }

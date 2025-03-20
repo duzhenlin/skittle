@@ -8,85 +8,137 @@
 package client
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/duzhenlin/skittle/src/core/helper/aes"
+	"reflect"
+	"sync"
+
 	"github.com/duzhenlin/skittle/src/config"
-	"github.com/duzhenlin/skittle/src/core/helper"
 	"github.com/hprose/hprose-golang/rpc"
 	"github.com/hprose/hprose-golang/rpc/fasthttp"
-	"reflect"
 )
 
-// Client 单例
+// HproseClient 定义客户端接口
+type HproseClient interface {
+	WithTarget(clientName string) *Client
+	GetClient() (*fasthttp.FastHTTPClient, error)
+	Invoke(method string, args ...interface{}) ([]reflect.Value, error)
+}
+
+// Client 表示Hprose客户端
 type Client struct {
-	config     *config.Config
-	ClientName string // 客户端名称
-	isTo       bool
+	config      *config.Config
+	ctx         context.Context
+	TargetName  string
+	clientLock  sync.RWMutex
+	initialized bool
 }
 
-var client *Client
+var (
+	instance *Client
+	once     sync.Once
+)
 
-func init() {
-	client = &Client{}
+// NewClient 创建新的客户端实例（线程安全单例）
+func NewClient(ctx context.Context, config *config.Config) *Client {
+	once.Do(func() {
+		instance = &Client{
+			config:      config,
+			ctx:         ctx,
+			initialized: true,
+		}
+	})
+	return instance
 }
 
-// GetClientInstance 获取实例
-func GetClientInstance(config *config.Config) *Client {
-	client.config = config
-	return client
-}
-
-func (c *Client) GetConfig() *config.Config {
-	return c.config
-}
-
-func (c *Client) SetConfig(config *config.Config) {
-	c.config = config
-}
-func (c *Client) To(clientName string) *Client {
-	c.ClientName = clientName
-	c.isTo = true
-	return c
-}
-
-func (c *Client) GetClient() (httpClient *fasthttp.FastHTTPClient, err error) {
-	var UserServiceUrl string
-	clients := c.config.Skittle.Client
-	if c.ClientName == "" || c.isTo == false {
-		c.ClientName = clients[0].ClientName
+// WithTarget 设置目标客户端（返回新实例保证线程安全）
+func (c *Client) WithTarget(clientName string) *Client {
+	c.clientLock.Lock()
+	defer c.clientLock.Unlock()
+	c.TargetName = clientName
+	return &Client{
+		config:      c.config,
+		ctx:         c.ctx,
+		TargetName:  clientName,
+		initialized: true,
 	}
-	clientName := c.ClientName
-	for _, item := range clients {
-		if item.ClientName == clientName {
-			UserServiceUrl = item.ClientUrl
-			break
+}
+
+// getServiceURL 获取服务地址（带错误处理）
+func (c *Client) getServiceURL() (string, error) {
+	if c.config == nil || c.config.Skittle.Client == nil {
+		return "", errors.New("client configuration not initialized")
+	}
+
+	clients := *c.config.Skittle.Client
+	if len(clients) == 0 {
+		return "", errors.New("empty client configuration")
+	}
+
+	target := c.TargetName
+	if target == "" {
+		target = clients[0].ClientName
+	}
+
+	for _, client := range clients {
+		if client.ClientName == target {
+			return client.ClientUrl, nil
 		}
 	}
 
-	httpClient = fasthttp.NewFastHTTPClient(UserServiceUrl)
-	httpClient.AddInvokeHandler(c.clientAesInvokeHandler)
-	return httpClient, err
+	return "", fmt.Errorf("target client not found: %s", target)
 }
 
-func (c *Client) Invoke(name string, args []reflect.Value) (results []reflect.Value, err error) {
-	httpClient, err := c.GetClient()
+// GetClient 获取Hprose客户端实例
+func (c *Client) GetClient() (*fasthttp.FastHTTPClient, error) {
+	if !c.initialized {
+		return nil, errors.New("client not initialized")
+	}
+
+	serviceURL, err := c.getServiceURL()
 	if err != nil {
-		return nil, err
-	}
-	settings := &rpc.InvokeSettings{
-		Mode: rpc.Normal,
+		return nil, fmt.Errorf("failed to get service URL: %w", err)
 	}
 
-	return httpClient.Invoke(name, args, settings)
+	client := fasthttp.NewFastHTTPClient(serviceURL)
+	client.AddInvokeHandler(c.clientAesInvokeHandler)
+	return client, nil
 }
 
+// clientAesInvokeHandler AES加密中间件
 func (c *Client) clientAesInvokeHandler(
 	name string,
 	args []reflect.Value,
-	context rpc.Context,
-	next rpc.NextInvokeHandler) (results []reflect.Value, err error) {
-	newArgs := make([]reflect.Value, 2)
+	ctx rpc.Context,
+	next rpc.NextInvokeHandler) ([]reflect.Value, error) {
 
-	newArgs[0] = reflect.ValueOf(helper.AesEncrypt(args[0], c.config.Skittle.SecretKey))
-	newArgs[1] = reflect.ValueOf(c.config.Skittle.ModuleId)
-	results, err = next(name, newArgs, context)
-	return
+	if len(args) == 0 {
+		return nil, errors.New("encryption requires at least one argument")
+	}
+	encryptedArgs := make([]reflect.Value, 2)
+	encrypt, err := aes.Encrypt(args[0].String(), c.config.Skittle.SecretKey)
+	if err != nil {
+		return nil, err
+	}
+	encryptedArgs[0] = reflect.ValueOf(encrypt)
+	encryptedArgs[1] = reflect.ValueOf(c.config.Skittle.ModuleId)
+
+	return next(name, encryptedArgs, ctx)
+}
+
+// Invoke 执行远程调用
+func (c *Client) Invoke(method string, args ...interface{}) ([]reflect.Value, error) {
+	client, err := c.GetClient()
+	if err != nil {
+		return nil, fmt.Errorf("client initialization failed: %w", err)
+	}
+
+	reflectArgs := make([]reflect.Value, len(args))
+	for i, arg := range args {
+		reflectArgs[i] = reflect.ValueOf(arg)
+	}
+
+	return client.Invoke(method, reflectArgs, &rpc.InvokeSettings{Mode: rpc.Normal})
 }

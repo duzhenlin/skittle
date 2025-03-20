@@ -8,45 +8,106 @@
 package core
 
 import (
+	"context"
+	"fmt"
 	"github.com/duzhenlin/skittle/src/config"
-	"github.com/duzhenlin/skittle/src/hprose"
 	"github.com/duzhenlin/skittle/src/hprose/client"
+	"github.com/duzhenlin/skittle/src/hprose/server"
+	redis2 "github.com/duzhenlin/skittle/src/redis"
 	"github.com/duzhenlin/skittle/src/user"
-	"strings"
+	"github.com/go-redis/redis/v8"
 )
 
-const providerList = "config,Client,Server,User"
+const Version = "1.1.0"
+
+const (
+	ProviderClient = "Client"
+	ProviderServer = "Server"
+	ProviderUser   = "User"
+)
+
+// 使用切片明确维护需要初始化的组件列表
+var providerList = []string{
+	ProviderClient,
+	ProviderServer,
+	ProviderUser,
+}
 
 type App struct {
-	Config *config.Config
-	Client *client.Client
-	Server *hprose.Server
-	User   *user.User
+	Version     string
+	Config      *config.Config  // 配置
+	Client      *client.Client  // 客户端
+	Server      *server.Server  // 服务端
+	User        *user.User      // 用户
+	Ctx         context.Context // 上下文
+	RedisClient *redis.Client   // redis客户端
 }
 
-func NewApp(config *config.Config) *App {
-	a := &App{}
-	a.Config = config
-	a.Config.SetConfig(*config)
-	err := a.RegisterProviders()
-	if err != nil {
-		return nil
+// NewApp 创建应用实例，返回实例和可能的错误
+func NewApp(ctx context.Context, config *config.Config) (*App, error) {
+	a := &App{
+		Config:  config,
+		Ctx:     ctx,
+		Version: Version,
 	}
-	return a
+
+	if err := a.RegisterBaseProviders(); err != nil {
+		return nil, fmt.Errorf("应用初始化失败: %w", err)
+	}
+
+	if err := a.RegisterProviders(); err != nil {
+		return nil, fmt.Errorf("应用初始化失败: %w", err)
+	}
+
+	return a, nil
 }
 
-func (a *App) RegisterProviders() error {
+// 定义组件初始化函数类型
+type componentInitializer func(a *App) interface{}
 
-	provider := strings.Split(providerList, ",")
-	for _, p := range provider {
-		switch p {
-		case "Client":
-			a.Client = client.GetClientInstance(a.Config)
-		case "Server":
-			a.Server = hprose.GetServerInstance(a.Config)
-		case "User":
-			a.User = user.GetUserInstance(a.Config)
+// 组件初始化映射表
+var componentInitializers = map[string]componentInitializer{
+	ProviderClient: func(a *App) interface{} {
+		return client.NewClient(a.Ctx, a.Config)
+	},
+	ProviderServer: func(a *App) interface{} {
+		return server.NewServer(a.Ctx, a.Config)
+	},
+	ProviderUser: func(a *App) interface{} {
+		return user.NewUser(a.Ctx, a.Config).
+			SetRedisClient(a.RedisClient).
+			SetHproseClient(a.Client)
+	},
+}
+
+// RegisterProviders 注册所有依赖组件
+func (a *App) RegisterProviders() error {
+	for _, provider := range providerList {
+		initializer, exists := componentInitializers[provider]
+		if !exists {
+			return fmt.Errorf("未定义的组件: %s", provider)
+		}
+
+		instance := initializer(a)
+
+		// 使用类型断言赋值到对应字段
+		switch provider {
+		case ProviderClient:
+			a.Client = instance.(*client.Client)
+		case ProviderServer:
+			a.Server = instance.(*server.Server)
+		case ProviderUser:
+			a.User = instance.(*user.User)
 		}
 	}
+	return nil
+}
+
+func (a *App) RegisterBaseProviders() error {
+	redisClient, err := redis2.GetRedisClient(a.Config)
+	if err != nil {
+		return fmt.Errorf("获取redis客户端失败: %w", err)
+	}
+	a.RedisClient = redisClient
 	return nil
 }

@@ -10,112 +10,164 @@ package user
 import (
 	"errors"
 	"fmt"
+	"github.com/duzhenlin/skittle/src/constant"
 	"github.com/duzhenlin/skittle/src/core/helper"
+	"github.com/duzhenlin/skittle/src/core/helper/aes"
 	"github.com/hprose/hprose-golang/util"
 	"net/http"
 	"strings"
 )
 
+// LoginSign 登录签名
 func (u *User) LoginSign(sign string) (*LoginSign, error) {
-	signEncryptStr, err := helper.AesDecrypt(sign, u.config.Skittle.SecretKey)
+	// 解密签名信息
+	decryptedSign, err := aes.Decrypt(sign, u.config.Skittle.SecretKey, constant.Base64URL)
 	if err != nil {
-		return nil, errors.New("登录失败，密钥解密失败")
+		return nil, fmt.Errorf("签名解密失败: %w", err)
 	}
 
-	strArrayNew := strings.Split(signEncryptStr, "|")
-	if len(strArrayNew) >= 1 {
-		//获取用户id
-		id := strArrayNew[0]
-		userInfo := u.Login(id, "web")
-		//登陆逻辑
-		token, err := u.LoginLogic(userInfo)
-
-		if err != nil {
-			return nil, err
-		}
-		ret := new(LoginSign)
-		ret.Token = token
-		return ret, nil
+	// 解析签名内容
+	parts := strings.Split(decryptedSign, "|") // 最多分割成两部分
+	if len(parts) < 1 || parts[0] == "" {
+		return nil, errors.New("无效的签名格式")
 	}
-	return nil, errors.New("登录失败，密钥解密失败")
-}
 
-// LoginUserId 根据用户id进行登陆，获取token
-func (u *User) LoginUserId(userId string, platform string) (*LoginSign, error) {
+	// 获取并验证用户ID
+	userID := strings.TrimSpace(parts[0])
+	if userID == "" {
+		return nil, errors.New("用户ID不能为空")
+	}
 
-	userInfo := u.Login(userId, platform)
-	//登陆逻辑
-	token, err := u.LoginLogic(userInfo)
-
+	// 执行登录流程
+	userInfo, err := u.Login(userID, "web")
 	if err != nil {
 		return nil, err
 	}
-	ret := new(LoginSign)
-	ret.Token = token
-	return ret, nil
+	token, err := u.LoginLogic(userInfo)
+	if err != nil {
+		return nil, fmt.Errorf("登录流程执行失败: %w", err)
+	}
+
+	return &LoginSign{Token: token}, nil
+}
+
+// LoginUserId 根据用户id进行登陆，获取token
+func (u *User) LoginUserId(userID string, platform string) (*LoginSign, error) {
+
+	userInfo, err := u.Login(userID, platform)
+	if err != nil {
+		return nil, err
+	}
+	if userInfo == nil {
+		return nil, fmt.Errorf("用户信息获取失败: ID=%s", userID)
+	}
+	// 执行登录逻辑
+	token, err := u.LoginLogic(userInfo)
+	if err != nil {
+		return nil, fmt.Errorf("登录处理失败: %w", err)
+	}
+
+	// 构造返回结果
+	return &LoginSign{
+		Token: token,
+	}, nil
 
 }
 
 // LoginSignByToken 根据token进行登陆，获取token
 func (u *User) LoginSignByToken(r *http.Request) (*LoginSign, error) {
-	token := r.Header.Get("app_token")
-	userInfo := u.Login(token, "app")
-	token, err := u.LoginLogic(userInfo)
-
+	// 从请求头获取令牌
+	appToken := strings.TrimSpace(r.Header.Get("app_token"))
+	if appToken == "" {
+		return nil, errors.New("缺失认证令牌")
+	}
+	// 获取用户信息
+	userInfo, err := u.Login(appToken, "app")
 	if err != nil {
 		return nil, err
 	}
-	ret := new(LoginSign)
-	ret.Token = token
-	return ret, nil
+
+	if userInfo == nil {
+		return nil, errors.New("用户信息获取失败")
+	}
+
+	// 执行登录逻辑
+	newToken, err := u.LoginLogic(userInfo)
+	if err != nil {
+		return nil, fmt.Errorf("令牌生成失败: %w", err)
+	}
+
+	// 返回登录凭证
+	return &LoginSign{
+		Token: newToken,
+	}, nil
 }
 
-func (u *User) Login(id string, platform string) interface{} {
-	//namespace := u.config.Skittle.Namespace
-	var info interface{}
-	if platform == "web" {
-		info, err := u.UserAuth(id)
-		if err != nil {
-			fmt.Println(err)
-		}
-		return info
-	}
-	//else if platform == "MiniProgram" {
-	//	info, err := PcUserAuth(id)
-	//	if err != nil {
-	//		fmt.Println(err)
-	//	}
-	//	return info
-	if platform == "app" {
-		info, err := u.UserAuthToken(id)
-		if err != nil {
-			fmt.Println(err)
-		}
-		return info
+func (u *User) Login(id string, platform string) (interface{}, error) {
+
+	// 验证输入参数
+	if id == "" {
+		return nil, errors.New("用户ID不能为空")
 	}
 
-	return info
+	// 定义平台处理策略
+	type authFunc func(string) (interface{}, error)
+	strategies := map[string]authFunc{
+		"web": u.UserAuth,
+		"app": u.UserAuthToken,
+		// 可扩展其他平台："MiniProgram",
+	}
+
+	// 获取对应的认证方法
+	auth, ok := strategies[platform]
+	if !ok {
+		return nil, fmt.Errorf("不支持的平台类型: %s", platform)
+	}
+
+	// 执行认证逻辑
+	info, err := auth(id)
+	if err != nil {
+
+		return nil, fmt.Errorf("认证服务不可用: %w", err)
+	}
+
+	return info, nil
 }
 
 func (u *User) LoginLogic(userInfo interface{}) (string, error) {
 
-	if !u.checkIsUserAuthRes(userInfo) {
-		return "", errors.New("checkIsUserAuthRes.登陆失败")
+	// 类型安全检查
+	res, ok := userInfo.(LoginRes)
+	if !ok || !checkIsUserAuthRes(userInfo) {
+		return "", fmt.Errorf("无效的用户认证类型: %T", userInfo)
 	}
-	UserInfo := userInfo.(LoginRes).LoginData
-	_, err := u.SetUserInfo(&UserInfo)
-	if err != nil {
-		fmt.Println(err)
-		return "", errors.New("SetUserInfo.登陆失败")
+
+	// 获取用户数据
+	UserInfo := res.LoginData
+
+	// 存储用户信息
+	if _, err := u.SetUserInfo(&UserInfo); err != nil {
+		return "", fmt.Errorf("用户信息存储失败: %w", err)
 	}
+
+	// 生成或返回现有令牌
 	if UserInfo.ModuleToken == "" {
-		srt := fmt.Sprintf("%s%s%s", util.UUIDv4(), UserInfo.ID, u.config.Skittle.Namespace)
-		return helper.GetStringMd5(srt), nil
+		return generateModuleToken(UserInfo.ID, u.config.Skittle.Namespace), nil
 	}
+
 	return UserInfo.ModuleToken, nil
 }
 
-func (u *User) checkIsUserAuthRes(data interface{}) bool {
+// generateModuleToken 生成模块访问令牌
+func generateModuleToken(userID, namespace string) string {
+	builder := strings.Builder{}
+	builder.WriteString(util.UUIDv4())
+	builder.WriteString(userID)
+	builder.WriteString(namespace)
+	return helper.GetStringMd5(builder.String())
+}
+
+func checkIsUserAuthRes(data interface{}) bool {
 	switch data.(type) {
 	case LoginRes:
 		return true
