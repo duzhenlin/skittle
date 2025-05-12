@@ -40,6 +40,6 @@ type RegisterContent struct {
 }
 type RegisterQuick struct {
 	Name string `json:"name"`
-	Icon int    `json:"icon"`
+	Icon string    `json:"icon"`
 	Path string `json:"path"`
 }
