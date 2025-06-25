@@ -13,17 +13,19 @@ import (
 	"github.com/duzhenlin/skittle/src/config"
 	"github.com/duzhenlin/skittle/src/hprose/client"
 	"github.com/duzhenlin/skittle/src/hprose/server"
+	"github.com/duzhenlin/skittle/src/logClient"
 	redis2 "github.com/duzhenlin/skittle/src/redis"
 	"github.com/duzhenlin/skittle/src/user"
 	"github.com/go-redis/redis/v8"
 )
 
-const Version = "1.1.0"
+const Version = "1.1.2"
 
 const (
 	ProviderClient = "Client"
 	ProviderServer = "Server"
 	ProviderUser   = "User"
+	ProviderLog    = "Log"
 )
 
 // 使用切片明确维护需要初始化的组件列表
@@ -31,16 +33,18 @@ var providerList = []string{
 	ProviderClient,
 	ProviderServer,
 	ProviderUser,
+	ProviderLog,
 }
 
 type App struct {
 	Version     string
-	Config      *config.Config  // 配置
-	Client      *client.Client  // 客户端
-	Server      *server.Server  // 服务端
-	User        *user.User      // 用户
-	Ctx         context.Context // 上下文
-	RedisClient *redis.Client   // redis客户端
+	Config      *config.Config       // 配置
+	Client      *client.Client       // 客户端
+	Server      *server.Server       // 服务端
+	User        *user.User           // 用户
+	Ctx         context.Context      // 上下文
+	RedisClient *redis.Client        // redis客户端
+	Log         *logClient.LogClient // 日志客户端
 }
 
 // NewApp 创建应用实例，返回实例和可能的错误
@@ -78,6 +82,9 @@ var componentInitializers = map[string]componentInitializer{
 			SetRedisClient(a.RedisClient).
 			SetHproseClient(a.Client)
 	},
+	ProviderLog: func(a *App) interface{} {
+		return logClient.NewLog(a.Ctx, a.Config, a.RedisClient)
+	},
 }
 
 // RegisterProviders 注册所有依赖组件
@@ -98,6 +105,9 @@ func (a *App) RegisterProviders() error {
 			a.Server = instance.(*server.Server)
 		case ProviderUser:
 			a.User = instance.(*user.User)
+		case ProviderLog:
+			a.Log = instance.(*logClient.LogClient)
+
 		}
 	}
 	return nil

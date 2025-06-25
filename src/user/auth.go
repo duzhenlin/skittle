@@ -38,8 +38,11 @@ func (u *User) LoginSign(sign string) (*LoginSign, error) {
 		return nil, errors.New("用户ID不能为空")
 	}
 
+	fmt.Println("用户ID:", userID)
 	// 执行登录流程
 	userInfo, err := u.Login(userID, "web")
+
+	fmt.Println("用户信息:", userInfo)
 	if err != nil {
 		return nil, err
 	}
