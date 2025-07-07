@@ -106,7 +106,6 @@ func (l *LogClient) Log(c *http.Request) {
 	if userinfo.ID == "" {
 		log.Printf("无效的id")
 	} else {
-		//首先创建用户信息
 		userInfo := User{
 			Id:           userinfo.ID,
 			Nickname:     userinfo.Nickname,
