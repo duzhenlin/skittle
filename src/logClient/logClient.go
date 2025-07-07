@@ -150,7 +150,7 @@ func (l *LogClient) Log(c *http.Request) {
 			httpInfo.RequestPayload = "{}" // 如果没有请求体，设置为空对象
 		}
 
-		// 填充表单数据
+		// 填充表单数据并过滤文件
 		if c.Method == http.MethodPost || c.Method == http.MethodPut {
 			if c.Form != nil {
 				formData := make(map[string]interface{})

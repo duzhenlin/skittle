@@ -14,4 +14,5 @@ type Redis struct {
 	Db           int      `default:"0"`
 	MasterName   string   `default:""`
 	SentinelAddr []string `default:""`
+	PoolSize     int      `default:"50"` // 设置最大连接数
 }
