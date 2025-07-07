@@ -23,7 +23,7 @@ type Register struct {
 }
 type RegisterOps struct {
 	URL    string `json:"url"`
-	Method int    `json:"method"`
+	Method string `json:"method"`
 }
 
 type RegisterData struct {
@@ -40,6 +40,6 @@ type RegisterContent struct {
 }
 type RegisterQuick struct {
 	Name string `json:"name"`
-	Icon string    `json:"icon"`
+	Icon string `json:"icon"`
 	Path string `json:"path"`
 }
