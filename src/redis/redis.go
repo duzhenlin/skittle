@@ -42,13 +42,14 @@ func initRedis(config *config.Config) (*redis.Client, error) {
 	// 公共配置项
 	password := config.Redis.Pwd
 	db := config.Redis.Db
+	poolSize := config.Redis.PoolSize
 
 	switch config.Redis.ConType {
 	case constant.RedisConTypeTpc:
 		if config.Redis.TpcConArr == "" {
 			return nil, errors.New("TCP连接地址不能为空")
 		}
-		return createTCPClient(config.Redis.TpcConArr, password, db)
+		return createTCPClient(config.Redis.TpcConArr, password, db, poolSize)
 
 	case constant.RedisConTypeSentinel:
 		if config.Redis.MasterName == "" {
@@ -70,11 +71,13 @@ func initRedis(config *config.Config) (*redis.Client, error) {
 }
 
 // createTCPClient 创建TCP直连客户端
-func createTCPClient(addr, password string, db int) (*redis.Client, error) {
+func createTCPClient(addr, password string, db int, poolSize int) (*redis.Client, error) {
+
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
 		DB:       db,
+		PoolSize: poolSize, // 设置最大连接数
 	})
 	return validateConnection(client)
 }
