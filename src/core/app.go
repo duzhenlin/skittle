@@ -13,7 +13,7 @@ import (
 	"github.com/duzhenlin/skittle/src/config"
 	"github.com/duzhenlin/skittle/src/hprose/client"
 	"github.com/duzhenlin/skittle/src/hprose/server"
-	"github.com/duzhenlin/skittle/src/logClient"
+	"github.com/duzhenlin/skittle/src/log_client"
 	redis2 "github.com/duzhenlin/skittle/src/redis"
 	"github.com/duzhenlin/skittle/src/user"
 	"github.com/go-redis/redis/v8"
@@ -38,13 +38,13 @@ var providerList = []string{
 
 type App struct {
 	Version     string
-	Config      *config.Config       // 配置
-	Client      *client.Client       // 客户端
-	Server      *server.Server       // 服务端
-	User        *user.User           // 用户
-	Ctx         context.Context      // 上下文
-	RedisClient *redis.Client        // redis客户端
-	Log         *logClient.LogClient // 日志客户端
+	Config      *config.Config        // 配置
+	Client      *client.Client        // 客户端
+	Server      *server.Server        // 服务端
+	User        *user.User            // 用户
+	Ctx         context.Context       // 上下文
+	RedisClient *redis.Client         // redis客户端
+	Log         *log_client.LogClient // 日志客户端
 }
 
 // NewApp 创建应用实例，返回实例和可能的错误
@@ -83,7 +83,7 @@ var componentInitializers = map[string]componentInitializer{
 			SetHproseClient(a.Client)
 	},
 	ProviderLog: func(a *App) interface{} {
-		return logClient.NewLog(a.Ctx, a.Config, a.RedisClient)
+		return log_client.NewLog(a.Ctx, a.Config, a.RedisClient)
 	},
 }
 
@@ -106,7 +106,7 @@ func (a *App) RegisterProviders() error {
 		case ProviderUser:
 			a.User = instance.(*user.User)
 		case ProviderLog:
-			a.Log = instance.(*logClient.LogClient)
+			a.Log = instance.(*log_client.LogClient)
 
 		}
 	}

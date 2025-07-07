@@ -1,4 +1,4 @@
-package logClient
+package log_client
 
 import (
 	"bytes"
@@ -188,7 +188,7 @@ func (l *LogClient) Log(c *http.Request) {
 		// 将日志记录转换为 JSON
 		var buf bytes.Buffer
 		if err = json.NewEncoder(&buf).Encode(logEntry); err != nil {
-			log.Fatalf("Error encoding logClient entry: %s", err)
+			log.Fatalf("Error encoding log_client entry: %s", err)
 		}
 
 		// 将日志记录发送到 Elasticsearch
