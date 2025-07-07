@@ -18,7 +18,7 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-const Version = "1.1.2"
+const Version = "1.1.3"
 
 const (
 	ProviderClient = "Client"

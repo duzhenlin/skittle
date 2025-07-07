@@ -13,7 +13,6 @@ import (
 	"github.com/duzhenlin/skittle/src/constant"
 	"github.com/duzhenlin/skittle/src/core/helper"
 	"github.com/duzhenlin/skittle/src/core/helper/aes"
-	"github.com/hprose/hprose-golang/util"
 	"net/http"
 	"strings"
 )
@@ -152,19 +151,10 @@ func (u *User) LoginLogic(userInfo interface{}) (string, error) {
 
 	// 生成或返回现有令牌
 	if UserInfo.ModuleToken == "" {
-		return generateModuleToken(UserInfo.ID, u.config.Skittle.Namespace), nil
+		return helper.GenerateModuleToken(UserInfo.ID, u.config.Skittle.Namespace), nil
 	}
 
 	return UserInfo.ModuleToken, nil
-}
-
-// generateModuleToken 生成模块访问令牌
-func generateModuleToken(userID, namespace string) string {
-	builder := strings.Builder{}
-	builder.WriteString(util.UUIDv4())
-	builder.WriteString(userID)
-	builder.WriteString(namespace)
-	return helper.GetStringMd5(builder.String())
 }
 
 func checkIsUserAuthRes(data interface{}) bool {
