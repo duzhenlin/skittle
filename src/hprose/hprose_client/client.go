@@ -5,30 +5,29 @@
 // @Date: 2025/3/10
 // @Time: 18:39
 
-package client
+package hprose_client
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/duzhenlin/skittle/src/core/helper/aes"
-	"reflect"
-	"sync"
-
-	"github.com/duzhenlin/skittle/src/config"
+	"github.com/duzhenlin/skittle/v2/src/config"
+	"github.com/duzhenlin/skittle/v2/src/core/helper/aes"
 	"github.com/hprose/hprose-golang/rpc"
 	"github.com/hprose/hprose-golang/rpc/fasthttp"
+	"reflect"
+	"sync"
 )
 
-// HproseClient 定义客户端接口
-type HproseClient interface {
-	WithTarget(clientName string) *Client
+// HproseClientInterface 定义客户端接口
+type HproseClientInterface interface {
+	WithTarget(clientName string) *HproseClientService
 	GetClient() (*fasthttp.FastHTTPClient, error)
 	Invoke(method string, args ...interface{}) ([]reflect.Value, error)
 }
 
-// Client 表示Hprose客户端
-type Client struct {
+// HproseClientService 表示Hprose客户端
+type HproseClientService struct {
 	config      *config.Config
 	ctx         context.Context
 	TargetName  string
@@ -37,14 +36,14 @@ type Client struct {
 }
 
 var (
-	instance *Client
+	instance *HproseClientService
 	once     sync.Once
 )
 
 // NewClient 创建新的客户端实例（线程安全单例）
-func NewClient(ctx context.Context, config *config.Config) *Client {
+func NewClient(ctx context.Context, config *config.Config) *HproseClientService {
 	once.Do(func() {
-		instance = &Client{
+		instance = &HproseClientService{
 			config:      config,
 			ctx:         ctx,
 			initialized: true,
@@ -54,11 +53,11 @@ func NewClient(ctx context.Context, config *config.Config) *Client {
 }
 
 // WithTarget 设置目标客户端（返回新实例保证线程安全）
-func (c *Client) WithTarget(clientName string) *Client {
+func (c *HproseClientService) WithTarget(clientName string) *HproseClientService {
 	c.clientLock.Lock()
 	defer c.clientLock.Unlock()
 	c.TargetName = clientName
-	return &Client{
+	return &HproseClientService{
 		config:      c.config,
 		ctx:         c.ctx,
 		TargetName:  clientName,
@@ -67,7 +66,7 @@ func (c *Client) WithTarget(clientName string) *Client {
 }
 
 // getServiceURL 获取服务地址（带错误处理）
-func (c *Client) getServiceURL() (string, error) {
+func (c *HproseClientService) getServiceURL() (string, error) {
 	if c.config == nil || c.config.Skittle.Client == nil {
 		return "", errors.New("client configuration not initialized")
 	}
@@ -92,7 +91,7 @@ func (c *Client) getServiceURL() (string, error) {
 }
 
 // GetClient 获取Hprose客户端实例
-func (c *Client) GetClient() (*fasthttp.FastHTTPClient, error) {
+func (c *HproseClientService) GetClient() (*fasthttp.FastHTTPClient, error) {
 	if !c.initialized {
 		return nil, errors.New("client not initialized")
 	}
@@ -108,7 +107,7 @@ func (c *Client) GetClient() (*fasthttp.FastHTTPClient, error) {
 }
 
 // clientAesInvokeHandler AES加密中间件
-func (c *Client) clientAesInvokeHandler(
+func (c *HproseClientService) clientAesInvokeHandler(
 	name string,
 	args []reflect.Value,
 	ctx rpc.Context,
@@ -129,7 +128,7 @@ func (c *Client) clientAesInvokeHandler(
 }
 
 // Invoke 执行远程调用
-func (c *Client) Invoke(method string, args ...interface{}) ([]reflect.Value, error) {
+func (c *HproseClientService) Invoke(method string, args ...interface{}) ([]reflect.Value, error) {
 	client, err := c.GetClient()
 	if err != nil {
 		return nil, fmt.Errorf("client initialization failed: %w", err)

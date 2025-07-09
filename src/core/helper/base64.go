@@ -4,7 +4,7 @@ import (
 	base64encoding "encoding/base64"
 	"fmt"
 	"github.com/cristalhq/base64"
-	"github.com/duzhenlin/skittle/src/core/helper/base64url"
+	"github.com/duzhenlin/skittle/v2/src/core/helper/base64url"
 	"io"
 	"strings"
 )

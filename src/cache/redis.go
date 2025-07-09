@@ -1,22 +1,20 @@
-// Package redis
-// Created by Duzhenlin
-// @Author   Duzhenlin
-// @Email: duzhenlin@vip.qq.com
-// @Date: 2025/3/10
-// @Time: 22:27
-
-package redis
+package cache
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/duzhenlin/skittle/src/config"
-	"github.com/duzhenlin/skittle/src/constant"
 	"sync"
+	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/duzhenlin/skittle/v2/src/config"
+	"github.com/duzhenlin/skittle/v2/src/constant"
+	"github.com/redis/go-redis/v9"
 )
+
+type RedisCache struct {
+	client *redis.Client
+}
 
 var (
 	redisClient *redis.Client
@@ -24,22 +22,21 @@ var (
 	initErr     error
 )
 
-// GetRedisClient 获取Redis客户端单例（线程安全）
-func GetRedisClient(config *config.Config) (*redis.Client, error) {
+// NewRedisCache 获取RedisCache单例（线程安全）
+func NewRedisCache(config *config.Config) (*RedisCache, error) {
 	redisOnce.Do(func() {
 		redisClient, initErr = initRedis(config)
 	})
-	return redisClient, initErr
+	if initErr != nil {
+		return nil, initErr
+	}
+	return &RedisCache{client: redisClient}, nil
 }
 
-// initRedis 封装Redis初始化逻辑
 func initRedis(config *config.Config) (*redis.Client, error) {
-	// 参数校验
 	if config == nil || config.Redis == nil {
 		return nil, errors.New("redis配置不能为空")
 	}
-
-	// 公共配置项
 	password := config.Redis.Pwd
 	db := config.Redis.Db
 	poolSize := config.Redis.PoolSize
@@ -50,7 +47,6 @@ func initRedis(config *config.Config) (*redis.Client, error) {
 			return nil, errors.New("TCP连接地址不能为空")
 		}
 		return createTCPClient(config.Redis.TpcConArr, password, db, poolSize)
-
 	case constant.RedisConTypeSentinel:
 		if config.Redis.MasterName == "" {
 			return nil, errors.New("sentinel模式需要指定MasterName")
@@ -64,25 +60,21 @@ func initRedis(config *config.Config) (*redis.Client, error) {
 			password,
 			db,
 		)
-
 	default:
 		return nil, fmt.Errorf("不支持的Redis连接类型: %s", config.Redis.ConType)
 	}
 }
 
-// createTCPClient 创建TCP直连客户端
 func createTCPClient(addr, password string, db int, poolSize int) (*redis.Client, error) {
-
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
 		DB:       db,
-		PoolSize: poolSize, // 设置最大连接数
+		PoolSize: poolSize,
 	})
 	return validateConnection(client)
 }
 
-// createSentinelClient 创建Sentinel模式客户端
 func createSentinelClient(masterName string, sentinelAddrs []string, password string, db int) (*redis.Client, error) {
 	client := redis.NewFailoverClient(&redis.FailoverOptions{
 		MasterName:    masterName,
@@ -93,10 +85,27 @@ func createSentinelClient(masterName string, sentinelAddrs []string, password st
 	return validateConnection(client)
 }
 
-// validateConnection 验证Redis连接有效性
 func validateConnection(client *redis.Client) (*redis.Client, error) {
 	if err := client.Ping(context.Background()).Err(); err != nil {
 		return nil, fmt.Errorf("redis连接验证失败: %w", err)
 	}
 	return client, nil
+}
+
+// 实现 Cache 接口
+func (r *RedisCache) Get(key string) (string, error) {
+	return r.client.Get(context.Background(), key).Result()
+}
+
+func (r *RedisCache) Set(key string, value string, ttl int) error {
+	return r.client.Set(context.Background(), key, value, time.Duration(ttl)*time.Second).Err()
+}
+
+func (r *RedisCache) Del(key string) error {
+	return r.client.Del(context.Background(), key).Err()
+}
+
+func (r *RedisCache) Exists(key string) (bool, error) {
+	res, err := r.client.Exists(context.Background(), key).Result()
+	return res > 0, err
 }

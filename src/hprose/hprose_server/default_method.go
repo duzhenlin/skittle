@@ -5,11 +5,11 @@
 // @Date: 2025/3/19
 // @Time: 23:28
 
-package server
+package hprose_server
 
 import (
 	"encoding/json"
-	"github.com/duzhenlin/skittle/src/config"
+	"github.com/duzhenlin/skittle/v2/src/config"
 	"log"
 )
 
@@ -20,7 +20,7 @@ type noticeParam struct {
 }
 
 // noticeFunction 用户更新函数
-func (s *Server) noticeFunction(data string) *noticeParam {
+func (s *HproseServerService) noticeFunction(data string) *noticeParam {
 	var param noticeParam
 	if err := json.Unmarshal([]byte(data), &param); err != nil {
 		log.Printf("JSON解析失败: %v", err)
@@ -64,7 +64,7 @@ func (s *Server) noticeFunction(data string) *noticeParam {
 }
 
 // registerFunction 注册函数
-func (s *Server) registerFunction() *config.Register {
+func (s *HproseServerService) registerFunction() *config.Register {
 	// 防御性检查配置层级
 	if s.config == nil ||
 		s.config.Skittle == nil ||

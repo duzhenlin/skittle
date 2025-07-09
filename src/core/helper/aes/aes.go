@@ -10,9 +10,9 @@ package aes
 import (
 	"fmt"
 	"github.com/cristalhq/base64"
-	"github.com/duzhenlin/skittle/src/constant"
-	"github.com/duzhenlin/skittle/src/core/helper"
-	"github.com/duzhenlin/skittle/src/errors"
+	"github.com/duzhenlin/skittle/v2/src/constant"
+	"github.com/duzhenlin/skittle/v2/src/core/helper"
+	"github.com/duzhenlin/skittle/v2/src/errors"
 	"github.com/forgoer/openssl"
 )
 

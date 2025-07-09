@@ -5,38 +5,38 @@
 // @Date: 2025/3/10
 // @Time: 18:39
 
-package server
+package hprose_server
 
 import (
 	"context"
 	"fmt"
-	"github.com/duzhenlin/skittle/src/config"
-	"github.com/duzhenlin/skittle/src/constant"
-	"github.com/duzhenlin/skittle/src/core/helper/aes"
+	"github.com/duzhenlin/skittle/v2/src/config"
+	"github.com/duzhenlin/skittle/v2/src/constant"
+	"github.com/duzhenlin/skittle/v2/src/core/helper/aes"
 	"github.com/hprose/hprose-golang/rpc"
 	"reflect"
 )
 
-// HproseServer 定义客户端接口
-type HproseServer interface {
+// HproseServerInterface 定义客户端接口
+type HproseServerInterface interface {
 	Start() *rpc.HTTPService
 }
 
-type Server struct {
+type HproseServerService struct {
 	config *config.Config
 	ctx    context.Context
 }
 
 // NewServer 创建新的服务实例
-func NewServer(ctx context.Context, config *config.Config) *Server {
-	return &Server{
+func NewServer(ctx context.Context, config *config.Config) *HproseServerService {
+	return &HproseServerService{
 		config: config,
 		ctx:    ctx,
 	}
 }
 
 // Start 启动服务
-func (s *Server) Start() *rpc.HTTPService {
+func (s *HproseServerService) Start() *rpc.HTTPService {
 	service := rpc.NewHTTPService()
 	service.AddInvokeHandler(s.serverAesInvokeHandler)
 	// 注册服务
@@ -50,7 +50,7 @@ func (s *Server) Start() *rpc.HTTPService {
 }
 
 // serverAesInvokeHandler 处理aes加密的请求
-func (s *Server) serverAesInvokeHandler(
+func (s *HproseServerService) serverAesInvokeHandler(
 	name string,
 	args []reflect.Value,
 	context rpc.Context,

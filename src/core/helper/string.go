@@ -8,6 +8,8 @@
 package helper
 
 import (
+	"encoding/json"
+	"github.com/google/uuid"
 	"github.com/hprose/hprose-golang/util"
 	"strings"
 )
@@ -19,4 +21,14 @@ func GenerateModuleToken(userID, namespace string) string {
 	builder.WriteString(userID)
 	builder.WriteString(namespace)
 	return GetStringMd5(builder.String())
+}
+
+func ToJson(v interface{}) string {
+	b, _ := json.Marshal(v)
+	return string(b)
+}
+
+// GenerateUUID 生成UUID
+func GenerateUUID() string {
+	return strings.ReplaceAll(uuid.New().String(), "-", "")
 }

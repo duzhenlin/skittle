@@ -1,6 +1,7 @@
 package helper
 
 import (
+	"context"
 	"encoding/json"
 	"strconv"
 	"strings"
@@ -68,4 +69,14 @@ func GetInterfaceToString(value interface{}) string {
 	}
 
 	return key
+}
+
+// GetRuntimeUUIDFromContext 优先从 context 读取 traceID，没有则生成新的 UUID
+func GetRuntimeUUIDFromContext(ctx context.Context) string {
+	if v := ctx.Value("RuntimeUUID"); v != nil {
+		if s, ok := v.(string); ok && s != "" {
+			return s
+		}
+	}
+	return GenerateUUID()
 }

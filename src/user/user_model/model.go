@@ -5,7 +5,7 @@
 // @Date: 2025/3/10
 // @Time: 22:13
 
-package user
+package user_model
 
 import jsoniter "github.com/json-iterator/go"
 
