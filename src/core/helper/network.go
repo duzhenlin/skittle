@@ -14,6 +14,34 @@ import (
 	"strings"
 )
 
+func GetClientIp(r *http.Request) string {
+	var clientIp string
+	realIps := r.Header.Get("X-Forwarded-For")
+	if realIps != "" && len(realIps) != 0 && !strings.EqualFold("unknown", realIps) {
+		ipArray := strings.Split(realIps, ",")
+		clientIp = ipArray[0]
+	}
+	if clientIp == "" {
+		clientIp = r.Header.Get("Proxy-Client-IP")
+	}
+	if clientIp == "" {
+		clientIp = r.Header.Get("WL-Proxy-Client-IP")
+	}
+	if clientIp == "" {
+		clientIp = r.Header.Get("HTTP_CLIENT_IP")
+	}
+	if clientIp == "" {
+		clientIp = r.Header.Get("HTTP_X_FORWARDED_FOR")
+	}
+	if clientIp == "" {
+		clientIp = r.Header.Get("X-Real-IP")
+	}
+	if clientIp == "" {
+		clientIp = ExtractIPAddress(r.RemoteAddr)
+	}
+	return clientIp
+}
+
 // ExtractIPAddress 提取 IP 地址
 func ExtractIPAddress(remoteAddr string) string {
 	host, _, err := net.SplitHostPort(remoteAddr)

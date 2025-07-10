@@ -9,8 +9,10 @@ package hprose_server
 
 import (
 	"encoding/json"
-	"github.com/duzhenlin/skittle/v2/src/config"
 	"log"
+
+	"github.com/duzhenlin/skittle/v2/src/config"
+	"github.com/duzhenlin/skittle/v2/src/core/helper"
 )
 
 type noticeParam struct {
@@ -28,16 +30,12 @@ func (s *HproseServerService) noticeFunction(data string) *noticeParam {
 	}
 	// 参数完整性检查
 	if param.Id == "" || param.OrgId == "" || param.Action == "" {
-		if s.config.Debug {
-			log.Printf("参数缺失: id=%s, org_id=%s, action=%s", param.Id, param.OrgId, param.Action)
-		}
+		helper.DebugLog(s.config, "[HproseServerService] 参数缺失: id=%s, org_id=%s, action=%s", param.Id, param.OrgId, param.Action)
 		return &param
 	}
 	// 配置存在性检查
 	if s.config.Skittle.Server.UserUpdateFunc == nil {
-		if s.config.Debug {
-			log.Printf("[DEBUG] user update function not configured")
-		}
+		helper.DebugLog(s.config, "[HproseServerService] user update function not configured")
 		return &param
 	}
 
@@ -45,19 +43,12 @@ func (s *HproseServerService) noticeFunction(data string) *noticeParam {
 	switch fn := s.config.Skittle.Server.UserUpdateFunc.(type) {
 	case config.NoticeFunctionFunc:
 		fn(param.Id, param.OrgId, param.Action)
-		if s.config.Debug {
-			log.Printf("[DEBUG] 用户更新函数执行成功，参数: %+v", param)
-		}
+		helper.DebugLog(s.config, "[HproseServerService] 用户更新函数执行成功，参数: %+v", param)
 	case func(string, string, string):
 		fn(param.Id, param.OrgId, param.Action)
-		if s.config.Debug {
-			log.Printf("[DEBUG] 用户更新函数执行成功，参数: %+v", param)
-		}
+		helper.DebugLog(s.config, "[HproseServerService] 用户更新函数执行成功，参数: %+v", param)
 	default:
-		if s.config.Debug {
-			log.Printf("[DEBUG] 用户更新函数类型错误，期望 func(string,string,string)，实际类型 %T",
-				s.config.Skittle.Server.UserUpdateFunc)
-		}
+		helper.DebugLog(s.config, "[HproseServerService] 用户更新函数类型错误，期望 func(string,string,string)，实际类型 %T", s.config.Skittle.Server.UserUpdateFunc)
 	}
 
 	return &param

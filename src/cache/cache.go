@@ -16,4 +16,5 @@ type Cache interface {
 	Set(key string, value string, ttl int) error
 	Del(key string) error
 	Exists(key string) (bool, error)
+	Expire(key string, ttl int) error // 新增
 }

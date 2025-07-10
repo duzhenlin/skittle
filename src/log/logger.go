@@ -102,7 +102,7 @@ func (l *DefaultLogger) CoreLogger(ctx context.Context, r *http.Request, body []
 		General: General{
 			RequestUrl:    r.URL.Path,
 			RequestMethod: r.Method,
-			RemoteAddress: helper.ExtractIPAddress(r.RemoteAddr),
+			RemoteAddress: helper.GetClientIp(r),
 		},
 		RequestHeaders: helper.HeadersToJson(r.Header),
 		RequestPayload: helper.GetRequestPayload(body, formData),

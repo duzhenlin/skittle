@@ -92,7 +92,8 @@ func validateConnection(client *redis.Client) (*redis.Client, error) {
 	return client, nil
 }
 
-// 实现 Cache 接口
+//  实现 Cache 接口
+
 func (r *RedisCache) Get(key string) (string, error) {
 	return r.client.Get(context.Background(), key).Result()
 }
@@ -108,4 +109,7 @@ func (r *RedisCache) Del(key string) error {
 func (r *RedisCache) Exists(key string) (bool, error) {
 	res, err := r.client.Exists(context.Background(), key).Result()
 	return res > 0, err
+}
+func (r *RedisCache) Expire(key string, ttl int) error {
+	return r.client.Expire(context.Background(), key, time.Duration(ttl)*time.Second).Err()
 }

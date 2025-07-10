@@ -58,33 +58,28 @@ func (c *UserService) SetUserInfo(userInfo *user_model.LoginData) (string, error
 	err = c.cache.Set(key, string(data), int((2 * time.Hour).Seconds()))
 	return key, err
 }
+
 func (c *UserService) ExtendTime(token string) bool {
-	if token != "" {
-		key := c.CacheKey("u_" + token)
-		result, err := c.cache.Get(key)
-		if err != nil {
-			log.Println("ExtendTime 获取缓存失败:", err)
-			return false
-		}
-		if result != "" {
-			// 解析用户信息
-			var userData user_model.LoginData
-			err = jsoniter.Unmarshal([]byte(result), &userData)
-			if err != nil {
-				log.Println("ExtendTime 解析用户信息失败:", err)
-				return false
-			}
-			// 存储用户信息
-			if _, err = c.SetUserInfo(&userData); err != nil {
-				log.Println("ExtendTime 存储用户信息失败:", err)
-				return false
-			}
-		}
-		return true
-	} else {
+	if token == "" {
 		log.Println("ExtendTime token为空")
 		return false
 	}
+	key := c.CacheKey("u_" + token)
+	result, err := c.cache.Get(key)
+	if err != nil {
+		log.Println("ExtendTime 获取缓存失败:", err)
+		return false
+	}
+	if result == "" {
+		log.Println("ExtendTime 缓存不存在")
+		return false
+	}
+	// 只续期，不重复写入
+	if err := c.cache.Expire(key, int((2 * time.Hour).Seconds())); err != nil {
+		log.Println("ExtendTime 续期失败:", err)
+		return false
+	}
+	return true
 }
 
 func (c *UserService) GetUserInfo(token string) (interface{}, error) {
@@ -92,9 +87,9 @@ func (c *UserService) GetUserInfo(token string) (interface{}, error) {
 		fmt.Println("上下文未初始化")
 	}
 	key := c.CacheKey("u_" + token)
-	fmt.Println("获取缓存key：" + key)
+	helper.DebugLog(c.config, "[UserService] 获取缓存key：%s", key)
 	result, err := c.cache.Get(key)
-	fmt.Println("获取缓存结果:", result)
+	helper.DebugLog(c.config, "[UserService] 获取缓存结果: %v", result)
 	if err != nil {
 		return nil, fmt.Errorf("用户缓存读取失败: %w", err)
 	}
@@ -110,33 +105,47 @@ func (c *UserService) GetUserInfoById(userId string) (interface{}, error) {
 	return result, err
 }
 
-func (c *UserService) GetUserInfoNew(h *http.Request) (user_model.LoginData, error) {
-	var err error
-	var result interface{}
+func (c *UserService) GetUserInfoNew(r *http.Request) (user_model.LoginData, error) {
+	var resultStr string
 
-	jwtToken := h.Header.Get("Jwttoken")
-
+	jwtToken := r.Header.Get("Jwttoken")
 	if jwtToken != "" {
 		userId := DeCodeJwtToken(jwtToken)
 		if userId == "" {
 			return user_model.LoginData{}, fmt.Errorf("无效的用户ID")
 		}
 		// 从缓存中获取用户信息
-		result, err = c.GetUserInfoById(userId)
-
+		res, err := c.GetUserInfoById(userId)
+		if err != nil {
+			return user_model.LoginData{}, fmt.Errorf("获取用户信息失败: %w", err)
+		}
+		var ok bool
+		resultStr, ok = res.(string)
+		if !ok {
+			return user_model.LoginData{}, fmt.Errorf("缓存数据类型错误")
+		}
 	} else {
-		token := h.Header.Get("token")
-		result, err = c.GetUserInfo(token)
+		token := r.Header.Get("token")
+		if token == "" {
+			return user_model.LoginData{}, fmt.Errorf("未提供 token")
+		}
+		helper.DebugLog(c.config, "[UserService] 执行GetUserInfoNew: GetUserInfo")
+		res, err := c.GetUserInfo(token)
+		if err != nil {
+			return user_model.LoginData{}, fmt.Errorf("获取用户信息失败: %w", err)
+		}
+		var ok bool
+		resultStr, ok = res.(string)
+		if !ok {
+			return user_model.LoginData{}, fmt.Errorf("缓存数据类型错误")
+		}
 	}
-	fmt.Println("获取的用户信息:", result)
-	if err != nil {
-		return user_model.LoginData{}, fmt.Errorf("获取用户信息失败: %w", err)
-	}
+
+	helper.DebugLog(c.config, "[UserService] 获取的用户信息: %v", resultStr)
 
 	// 解析用户信息
 	var userData user_model.LoginData
-	err = jsoniter.Unmarshal([]byte(result.(string)), &userData)
-	if err != nil {
+	if err := jsoniter.Unmarshal([]byte(resultStr), &userData); err != nil {
 		return user_model.LoginData{}, fmt.Errorf("解析用户信息失败: %w", err)
 	}
 

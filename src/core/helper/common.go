@@ -3,9 +3,12 @@ package helper
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/duzhenlin/skittle/v2/src/config"
 )
 
 // GetInterfaceToString interface转string
@@ -79,4 +82,11 @@ func GetRuntimeUUIDFromContext(ctx context.Context) string {
 		}
 	}
 	return GenerateUUID()
+}
+
+// DebugLog 辅助调试打印，仅在 config.Debug 为 true 时输出
+func DebugLog(cfg *config.Config, format string, args ...interface{}) {
+	if cfg != nil && cfg.Debug {
+		fmt.Printf("[Debug] "+format+"\n", args...)
+	}
 }

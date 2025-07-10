@@ -10,13 +10,14 @@ package user_client
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/duzhenlin/skittle/v2/src/config"
 	"github.com/duzhenlin/skittle/v2/src/core/helper"
 	"github.com/duzhenlin/skittle/v2/src/hprose/hprose_client"
 	"github.com/duzhenlin/skittle/v2/src/user/user_model"
 	jsoniter "github.com/json-iterator/go"
 	"go.uber.org/dig"
-	"time"
 )
 
 type ServiceDefaultUser struct {
@@ -84,10 +85,8 @@ func (c *UserClientService) authRequest(paramKey, paramValue, method string) (in
 		return nil, fmt.Errorf("未知的认证方法: %s", method)
 	}
 	// 调试日志
-	if c.config.Debug {
-		helper.RunTime(time.Now(), c.hproseClient.TargetName, method, args)
-		fmt.Printf("[DEBUG] 远程认证结果: %v\n", result)
-	}
+	helper.DebugLog(c.config, "[UserClientService] RunTime: %v, Target: %s, Method: %s, Args: %+v", time.Now(), c.hproseClient.TargetName, method, args)
+	helper.DebugLog(c.config, "[UserClientService] 远程认证结果: %v", result)
 	if err != nil {
 		return nil, fmt.Errorf("远程认证失败: %w", err)
 	}
