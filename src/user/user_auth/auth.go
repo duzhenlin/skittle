@@ -108,7 +108,7 @@ func (a *AuthService) LoginUserId(userID string, platform string) (*user_model.L
 // LoginSignByToken 根据token进行登陆，获取token
 func (a *AuthService) LoginSignByToken(r *http.Request) (*user_model.LoginSign, error) {
 	// 从请求头获取令牌
-	appToken := strings.TrimSpace(r.Header.Get("app_token"))
+	appToken := strings.TrimSpace(r.Header.Get("appToken"))
 	if appToken == "" {
 		return nil, errors.New("缺失认证令牌")
 	}
@@ -178,7 +178,7 @@ func (a *AuthService) LoginLogic(userInfo interface{}) (string, error) {
 
 	// 生成或返回现有令牌
 	if UserInfo.ModuleToken == "" {
-		return helper.GenerateModuleToken(UserInfo.ID, a.config.Skittle.Namespace), nil
+		UserInfo.ModuleToken = helper.GenerateModuleToken(UserInfo.ID, a.config.Skittle.Namespace)
 	}
 
 	// 存储用户信息

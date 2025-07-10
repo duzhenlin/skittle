@@ -22,7 +22,7 @@ import (
 	"go.uber.org/dig"
 )
 
-const Version = "2.0.0"
+const Version = "2.0.1"
 
 type App struct {
 	Version    string
