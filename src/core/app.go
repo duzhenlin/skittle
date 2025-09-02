@@ -9,6 +9,7 @@ package core
 
 import (
 	"context"
+
 	"github.com/duzhenlin/skittle/v2/src/cache"
 	"github.com/duzhenlin/skittle/v2/src/config"
 	"github.com/duzhenlin/skittle/v2/src/core/service_providers"
@@ -22,7 +23,7 @@ import (
 	"go.uber.org/dig"
 )
 
-const Version = "2.0.2"
+const Version = "2.0.3"
 
 type App struct {
 	Version    string

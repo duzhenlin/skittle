@@ -84,9 +84,10 @@ func GetRuntimeUUIDFromContext(ctx context.Context) string {
 	return GenerateUUID()
 }
 
-// DebugLog 辅助调试打印，仅在 config.Debug 为 true 时输出
+// DebugLog 辅助调试打印，仅在 config.Debug 为 true 时输出，包含时间信息
 func DebugLog(cfg *config.Config, format string, args ...interface{}) {
 	if cfg != nil && cfg.Debug {
-		fmt.Printf("[Debug] "+format+"\n", args...)
+		currentTime := time.Now().Format("2006-01-02 15:04:05")
+		fmt.Printf("[Debug] [%s] "+format+"\n", append([]interface{}{currentTime}, args...)...)
 	}
 }
