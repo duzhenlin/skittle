@@ -19,7 +19,8 @@ type Skittle struct {
 	Server    *Server   `json:"server"`
 	Client    *[]Client `json:"client"`
 	ModuleId  string    `json:"module_id"`
-	SecretKey string    `json:"secret_key"`
+	SecretKey string    `json:"secret_key"` // AES加密密钥
+	JwtSecret string    `json:"jwt_secret"` // JWT签名密钥
 }
 
 type EsConfig struct {

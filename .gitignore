@@ -15,3 +15,5 @@
 # vendor/
 /main.go
 /src/main.go
+./test_user.go
+/test_user.go

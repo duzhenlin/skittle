@@ -110,7 +110,10 @@ func (c *UserService) GetUserInfoNew(r *http.Request) (user_model.LoginData, err
 
 	jwtToken := r.Header.Get("Jwttoken")
 	if jwtToken != "" {
-		userId := DeCodeJwtToken(jwtToken)
+		userId, err := c.DeCodeJwtToken(jwtToken)
+		if err != nil {
+			return user_model.LoginData{}, fmt.Errorf("JWT解析失败: %w", err)
+		}
 		if userId == "" {
 			return user_model.LoginData{}, fmt.Errorf("无效的用户ID")
 		}
@@ -152,12 +155,44 @@ func (c *UserService) GetUserInfoNew(r *http.Request) (user_model.LoginData, err
 	return userData, nil
 }
 
-func DeCodeJwtToken(jwtToken string) string {
-	token, err := jwt.ParseWithClaims(jwtToken, jwt.MapClaims{}, func(t *jwt.Token) (interface{}, error) { return []byte("iqilu@fugui"), nil })
-	if err != nil {
-		return ""
+// DeCodeJwtToken 解析JWT Token并返回用户ID
+// 从配置中读取JWT密钥，支持密钥配置化
+func (c *UserService) DeCodeJwtToken(jwtToken string) (string, error) {
+	if jwtToken == "" {
+		return "", fmt.Errorf("JWT token为空")
 	}
-	return helper.GetInterfaceToString(token.Claims.(jwt.MapClaims)["userid"])
+
+	// 从配置读取JWT密钥
+	jwtSecret := c.config.Skittle.JwtSecret
+	if jwtSecret == "" {
+		return "", fmt.Errorf("JWT密钥未配置")
+	}
+
+	// 解析JWT Token
+	token, err := jwt.ParseWithClaims(jwtToken, jwt.MapClaims{}, func(t *jwt.Token) (interface{}, error) {
+		// 验证签名算法
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("不支持的签名算法: %v", t.Header["alg"])
+		}
+		return []byte(jwtSecret), nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("JWT解析失败: %w", err)
+	}
+
+	// 安全类型断言
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return "", fmt.Errorf("无效的JWT claims")
+	}
+
+	// 提取用户ID
+	userID, ok := claims["userid"]
+	if !ok {
+		return "", fmt.Errorf("JWT claims中缺少userid字段")
+	}
+
+	return helper.GetInterfaceToString(userID), nil
 }
 
 func (c *UserService) CacheKey(suffix string) string {

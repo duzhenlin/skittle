@@ -23,8 +23,6 @@ import (
 	"go.uber.org/dig"
 )
 
-const Version = "2.0.3"
-
 type App struct {
 	Version    string
 	Config     *config.Config
@@ -66,7 +64,7 @@ func NewApp(c *dig.Container) (*App, error) {
 	var app *App
 	err := c.Invoke(func(deps appDeps) {
 		app = &App{
-			Version:    Version,
+			Version:    GetVersion(),
 			Config:     deps.Cfg,
 			Ctx:        deps.Ctx,
 			Client:     deps.HproseClient,
