@@ -17,3 +17,6 @@
 /src/main.go
 ./test_user.go
 /test_user.go
+
+# Documentation (not uploaded to git)
+docs/

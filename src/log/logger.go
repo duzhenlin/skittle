@@ -69,11 +69,15 @@ func (l *DefaultLogger) Error(ctx context.Context, msg string, fields ...interfa
 	l.LogToES(ctx, ERROR, msg, extra)
 }
 func (l *DefaultLogger) LogToES(ctx context.Context, level int, msg string, extra interface{}) {
+	channel := ""
+	if l.cfg != nil && l.cfg.Skittle != nil {
+		channel = l.cfg.Skittle.Namespace
+	}
 	doc := map[string]interface{}{
 		"message":    msg,
 		"level":      level,
 		"level_name": LevelName(level),
-		"channel":    l.cfg.Skittle.Namespace,
+		"channel":    channel,
 		"datetime":   time.Now(),
 		"extra":      mergeExtraWithContext(ctx, extra),
 	}
@@ -87,13 +91,18 @@ func (l *DefaultLogger) LogToES(ctx context.Context, level int, msg string, extr
 }
 
 func (l *DefaultLogger) CoreLogger(ctx context.Context, r *http.Request, body []byte) (context.Context, Extra) {
-	// 1. 获取用户信息
-	userData, _ := l.User.GetUserInfoNew(r)
-	user := User{
-		Id:           userData.ID,
-		Nickname:     userData.Nickname,
-		Organization: userData.Orgname,
-		Phone:        userData.Username,
+	// 1. 获取用户信息（如果user模块可用）
+	var user User
+	if l.User != nil {
+		userData, err := l.User.GetUserInfoNew(r)
+		if err == nil {
+			user = User{
+				Id:           userData.ID,
+				Nickname:     userData.Nickname,
+				Organization: userData.Orgname,
+				Phone:        userData.Username,
+			}
+		}
 	}
 
 	// 2. 通用辅助方法

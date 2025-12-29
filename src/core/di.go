@@ -14,8 +14,13 @@ import (
 	"go.uber.org/dig"
 )
 
-// BuildContainer 构建容器
+// BuildContainer 构建容器（使用默认选项，即开即用模式）
 func BuildContainer(ctx context.Context, cfg *config.Config) (*dig.Container, error) {
+	return BuildContainerWithOptions(ctx, cfg, DefaultAppOptions())
+}
+
+// BuildContainerWithOptions 构建容器（支持自定义选项）
+func BuildContainerWithOptions(ctx context.Context, cfg *config.Config, opts *AppOptions) (*dig.Container, error) {
 	c := dig.New()
 
 	// 基础依赖
@@ -26,8 +31,8 @@ func BuildContainer(ctx context.Context, cfg *config.Config) (*dig.Container, er
 		return nil, err
 	}
 
-	// 统一注册所有服务
-	if err := RegisterAll(c); err != nil {
+	// 根据选项注册服务
+	if err := RegisterWithOptions(c, opts); err != nil {
 		return nil, err
 	}
 

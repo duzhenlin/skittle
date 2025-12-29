@@ -19,7 +19,7 @@ type LogDeps struct {
 	dig.In
 	Config *config.Config
 	Ctx    context.Context
-	User   *user_service.UserService `name:"user"`
+	User   *user_service.UserService `name:"user"` // 可选：如果未启用user模块，此字段可能为nil
 }
 
 func NewLogger(deps LogDeps) Logger {
@@ -31,6 +31,8 @@ func NewLogger(deps LogDeps) Logger {
 		esLogger = nil
 	}
 
-	fmt.Printf("NewLogger: %s \n", deps.Config.EsConfig.Address)
+	if deps.Config != nil && deps.Config.EsConfig != nil {
+		fmt.Printf("NewLogger: %s \n", deps.Config.EsConfig.Address)
+	}
 	return NewDefaultLogger(deps, zapLogger, esLogger)
 }
